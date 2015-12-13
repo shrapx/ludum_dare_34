@@ -1,0 +1,17 @@
+{
+	"textures":{
+		"particle":"data/pix/particle.png",
+		"grid":"data/pix/grid.png",
+		"bg1":"data/pix/2twoside_01.png",
+		"guy":"data/pix/particle.png",
+		"pixel":"data/pix/pixel.png"
+	},
+
+	"binds":{
+		"A":"left",
+		"D":"right",
+		"W":"up",
+		"S":"down",
+		"MouseLeft":"click"
+	}
+}
