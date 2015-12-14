@@ -7,7 +7,6 @@ project(${TARGET})
 
 # includes
 set(SFML_ROOT "C:/Program Files (x86)/SFML")
-#set(SFML_STATIC_LIBRARIES TRUE)
 find_package(SFML COMPONENTS audio graphics window system)
 include_directories(${SFML_INCLUDE_DIR})
 include_directories("E:/dev/downloads/jsoncpp/dist")
