@@ -66,7 +66,7 @@ using namespace Json;
 
 struct Guy
 {
-	float num_torches = 3;
+	float num_torches = 0;
 	float m_accel = 0.09f;
 	float m_friction = 0.97f;
 	sf::Vector2f m_velocity = sf::Vector2f(0.0f, 0.0f);
@@ -158,19 +158,16 @@ public:
 		m_sprites.emplace( "guy", make_shared<sf::Sprite>( *m_textures.at("guy").get() ) );
 
 		m_sprites.emplace( "torch_icon", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
-		//m_sprites.emplace( "torch", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
 
 		m_sprites.at("torch_icon")->setTextureRect( sf::IntRect(24,0, 32, 16) );
-		m_sprites.at("torch_icon")->setOrigin(32+8,16);
+		m_sprites.at("torch_icon")->setOrigin(4,16);
+
+		m_sprites.emplace( "torch", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
+		m_sprites.at("torch")->setTextureRect( sf::IntRect(8, 0, 8, 8) );
+		m_sprites.at("torch")->setOrigin(4,4);
 
 		m_sprites.at("guy")->setPosition(start_loc);
 		m_sprites.at("guy")->setOrigin(4,4);
-		//m_sprites.at("guy")->setPosition(ZOOM_W/2, ZOOM_H/2);
-
-		m_sprites.emplace( "bg1", make_shared<sf::Sprite>( *m_textures.at("bg1").get() ) );
-
-		//m_sprites.at("bg1").setScale(screen_w, screen_h);
-
 	};
 
 	int run()
@@ -224,30 +221,30 @@ private:
 		int ud = int( -get_command(0,"up")  ) + int( get_command(0,"down") );
 		int lr = int( -get_command(0,"left")) + int( get_command(0,"right"));
 
-		guy.m_velocity.x += lr * guy.m_accel;
-		guy.m_velocity.y += ud * guy.m_accel;
+		m_guy.m_velocity.x += lr * m_guy.m_accel;
+		m_guy.m_velocity.y += ud * m_guy.m_accel;
 
-		guy.m_velocity.x *= guy.m_friction;
-		guy.m_velocity.y *= guy.m_friction;
+		m_guy.m_velocity.x *= m_guy.m_friction;
+		m_guy.m_velocity.y *= m_guy.m_friction;
 
 		auto pos = m_sprites.at("guy")->getPosition();
-		pos += guy.m_velocity;
+		pos += m_guy.m_velocity;
 
 		if ( !m_world.can_walk(pos) )
 		{
-			if( fabs(guy.m_velocity.x) > fabs(guy.m_velocity.y) )
+			if( fabs(m_guy.m_velocity.x) > fabs(m_guy.m_velocity.y) )
 			{
-				guy.m_velocity.x *= -0.75f;
-				guy.m_velocity.y *= 0.25f;
+				m_guy.m_velocity.x *= -0.75f;
+				m_guy.m_velocity.y *= 0.25f;
 			}
 			else
 			{
-				guy.m_velocity.y *= -0.75f;
-				guy.m_velocity.x *= 0.25f;
+				m_guy.m_velocity.y *= -0.75f;
+				m_guy.m_velocity.x *= 0.25f;
 			}
-			//float x = guy.m_velocity.x;
-			//guy.m_velocity.x = guy.m_velocity.y;
-			//guy.m_velocity.y = -x;
+			//float x = m_guy.m_velocity.x;
+			//m_guy.m_velocity.x = m_guy.m_velocity.y;
+			//m_guy.m_velocity.y = -x;
 		}
 		else
 		{
@@ -258,34 +255,42 @@ private:
 			bool take  = get_command(0,"take");
 			bool place = get_command(0,"place");
 
+			bool no_torch = m_guy.num_torches == 0;
+
 			if ( take )
 			{
-				if ( m_world.light_take(pos) );
+				if ( m_world.light_take(pos) )
 				{
-					guy.num_torches++;
+					m_guy.num_torches++;
 
-					if (guy.num_torches > 0)
-						m_world.reset_moving_torch(0, pos);
+					if (no_torch)
+					{
+						//m_world.unset_moving_torch(0);
+						//m_world.reset_moving_torch(0, pos);
+						m_world.set_moving_torch(0, true,  pos);
+					}
 				}
+				cout << m_guy.num_torches << endl;
 			}
-			else if ( place && (guy.num_torches > 0) )
+			else if ( place && (m_guy.num_torches > 0) )
 			{
+
 				if ( m_world.light_place(pos) )
 				{
-					guy.num_torches--;
+					m_guy.num_torches--;
 
-					if (guy.num_torches == 0)
-						m_world.unset_moving_torch(0);
+					//if (m_guy.num_torches == 0) m_world.unset_moving_torch(0);
+					if (m_guy.num_torches == 0) m_world.set_moving_torch(0, false,  pos);
 				}
+				cout << m_guy.num_torches << endl;
 			}
 
 			/*if ( take || place)
 			{
-				guy.m_velocity *= 0.5f;
+				m_guy.m_velocity *= 0.5f;
 			}*/
 
-			if (guy.num_torches > 0)
-				m_world.set_moving_torch(0, pos);
+			if (m_guy.num_torches > 0) m_world.set_moving_torch(0, true,  pos);
 		}
 
 		//m_particles.update();
@@ -305,18 +310,27 @@ private:
 		//render_texture.draw(m_sprite_bg);
 		//render_texture.draw( *m_sprites.at( "bg1").get() );
 
+		// bg
+
 		//render_texture.draw(m_particles);
 		//render_texture.draw(m_sectors);
 		render_texture.draw(m_world);
 
-		/// draw fg
+		/// fg
+
+		for ( auto& pos : m_world.m_light_positions_placed)
+		{
+			m_sprites.at("torch")->setPosition( pos );
+			render_texture.draw( *m_sprites.at("torch").get() );
+		}
 
 		render_texture.draw( *m_sprites.at("guy").get() );
-		/// draw ui
+
+		/// ui
 
 		const sf::Vector2f& center = view.getCenter();
 
-		for ( int i=0; i< guy.num_torches; ++i )
+		for ( int i=0; i< m_guy.num_torches; ++i )
 		{
 			m_sprites.at("torch_icon")->setPosition( (center.x  + (ZOOM_W*0.5f)) - 8 - (8*i), (center.y + (ZOOM_H*0.5f)) - 8);
 			//m_sprites.at("torch_icon")->setPosition( center.x, center.y);
@@ -351,7 +365,7 @@ private:
 
 	unordered_map<string, shared_ptr<sf::Sprite>> m_sprites;
 
-	Guy guy;
+	Guy m_guy;
 	//sf::Sprite m_sprite_bg;
 
 	//Particles<10000> m_particles;

@@ -60,6 +60,7 @@ struct Tile
 struct MovingTorches
 {
 	bool active = false;
+	bool active_prev = false;
 	sf::Vector2i loc;
 	sf::Vector2i loc_prev;
 };
@@ -75,6 +76,9 @@ public:
 	array<array<Tile,size_height>,size_width> m_array;
 
 	array<MovingTorches, 16> m_lights_that_move;
+
+	vector<sf::Vector2f> m_light_positions;
+	vector<sf::Vector2f> m_light_positions_placed;
 
 	World()
 	{
@@ -145,20 +149,11 @@ public:
 		auto ipos = validate( pos );
 		return light_take(ipos);
 	}
-	void reset_moving_torch(int id, sf::Vector2f pos )
+
+	void set_moving_torch(int id, bool active, sf::Vector2f pos )
 	{
 		auto ipos = validate( pos );
-		reset_moving_torch(id, ipos);
-	}
-	void unset_moving_torch(int id, sf::Vector2f pos )
-	{
-		auto ipos = validate( pos );
-		unset_moving_torch(id, ipos);
-	}
-	void set_moving_torch(int id, sf::Vector2f pos )
-	{
-		auto ipos = validate( pos );
-		set_moving_torch(id, ipos);
+		set_moving_torch(id, active, ipos);
 	}
 
 	bool can_walk( sf::Vector2i pos )
@@ -182,8 +177,7 @@ public:
 
 		Tile& tile = m_array[pos.x][pos.y];
 
-		//tile.num_lights++;
-		if (!tile.placed_light)
+		if ( !tile.placed_light )
 		{
 			tile.placed_light = true;
 			return true;
@@ -195,51 +189,49 @@ public:
 	{
 		Tile& tile = m_array[pos.x][pos.y];
 
-		if (tile.placed_light)
+		if ( tile.placed_light )
 		{
 			tile.placed_light = false;
+
+			return true;
+		}
+		else
+			return false;
+	}
+
+	bool light_walking_add( sf::Vector2i pos )
+	{
+		// place only if its not near the edge, forced darkness around the edge
+		if ( !light_can_place(pos) ) return false;
+
+		Tile& tile = m_array[pos.x][pos.y];
+
+		tile.walking_light++;
+		return true;
+	}
+
+	bool light_walking_remove( sf::Vector2i pos )
+	{
+		Tile& tile = m_array[pos.x][pos.y];
+
+		if (tile.walking_light > 0);
+		{
+			tile.walking_light--;
 			return true;
 		}
 		return false;
 	}
 
-	void light_walking_add( sf::Vector2i pos )
+	void set_moving_torch( int id, bool active, sf::Vector2i pos )
 	{
-		// place only if its not near the edge, forced darkness around the edge
-		if ( !light_can_place(pos) ) return;
-
-		Tile& tile = m_array[pos.x][pos.y];
-
-		tile.walking_light++;
-	}
-
-	void light_walking_remove( sf::Vector2i pos )
-	{
-		Tile& tile = m_array[pos.x][pos.y];
-		tile.walking_light--;
-	}
-
-	void reset_moving_torch(int id, sf::Vector2i pos )
-	{
-		m_lights_that_move[id].active = true;
-		m_lights_that_move[id].loc = pos;
-		m_lights_that_move[id].loc_prev = pos;
-	}
-
-	void unset_moving_torch(int id)
-	{
-		m_lights_that_move[id].active = false;
-	}
-
-	void set_moving_torch( int id, sf::Vector2i pos )
-	{
-		m_lights_that_move[id].active = true;
+		m_lights_that_move[id].active = active;
 		m_lights_that_move[id].loc = pos;
 	}
 
 	void update_light_distances()
 	{
-		vector<sf::Vector2f> lights;
+		m_light_positions.clear();
+		m_light_positions_placed.clear();
 
 		for ( int w=0; w < size_width; ++w )
 		{
@@ -247,14 +239,18 @@ public:
 			{
 				m_array[w][h].distance_to_light = LIGHT_DISTANCE_OFF;
 
+				if (m_array[w][h].placed_light)
+				{
+					m_light_positions_placed.emplace_back( get_pos(w, h) );
+				}
 				if (m_array[w][h].placed_light || (m_array[w][h].walking_light > 0) )
 				{
-					lights.emplace_back( get_pos(w, h) );
+					m_light_positions.emplace_back( get_pos(w, h) );
 				}
 			}
 		}
 
-		for ( auto& light : lights )
+		for ( auto& light : m_light_positions )
 		{
 			for ( int w=0; w < size_width; ++w )
 			{
@@ -280,12 +276,16 @@ public:
 		// handling moving torches
 		for ( auto& torch : m_lights_that_move )
 		{
-			if ( torch.active && (torch.loc != torch.loc_prev) );
+			if ( torch.loc != torch.loc_prev);
 			{
-				light_walking_remove(torch.loc_prev);
-				light_walking_add(torch.loc);
+				if (torch.active_prev)
+					light_walking_remove(torch.loc_prev);
+
+				if (torch.active)
+					light_walking_add(torch.loc);
 
 				torch.loc_prev = torch.loc;
+				torch.active_prev = torch.active;
 			}
 		}
 
