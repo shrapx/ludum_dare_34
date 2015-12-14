@@ -20,17 +20,30 @@
 #include "timing.hpp"
 #include "input.hpp"
 
+#define M_PI		3.14159265358979323846
+#define M_PI_2	1.57079632679489661923
+
+#define LIGHT_DISTANCE 50
+#define LIGHT_DISTANCE_OFF 100000
+
+#define TILE_SIZE 8
+#define TILES_MAX 16
+#define TILES_SQUARED 4
+
 #define SCREEN_W 1440
 #define SCREEN_H 720
 
-#define GRID_W 20
-#define GRID_H 20
+#define WORLD_SIZE 64
 
-#define ZOOM_W SCREEN_W
-#define ZOOM_H SCREEN_H
+#define ZOOM 6.0f
+#define ZOOM_W SCREEN_W/ZOOM
+#define ZOOM_H SCREEN_H/ZOOM
 
-#define GRID_N_W SCREEN_W/GRID_W
-#define GRID_N_H SCREEN_H/GRID_H
+#define SCREEN_GRID_W SCREEN_W/float(TILE_SIZE)
+#define SCREEN_GRID_H SCREEN_H/float(TILE_SIZE)
+
+#define ESTATE_TILE_W ZOOM_W/float(TILE_SIZE)
+#define ESTATE_TILE_H ZOOM_H/float(TILE_SIZE)
 
 template<typename T>
 sf::Vector2<T> normalize(const sf::Vector2<T>& source)
@@ -43,11 +56,9 @@ sf::Vector2<T> normalize(const sf::Vector2<T>& source)
 }
 
 #include "colour.hpp"
-#include "sectors.hpp"
 //#include "particles.hpp"
-
-#define M_PI		3.14159265358979323846
-#define M_PI_2	1.57079632679489661923
+//#include "sectors.hpp"
+#include "world.hpp"
 
 
 using namespace std;
@@ -55,6 +66,7 @@ using namespace Json;
 
 struct Guy
 {
+	float num_torches = 3;
 	float m_accel = 0.09f;
 	float m_friction = 0.97f;
 	sf::Vector2f m_velocity = sf::Vector2f(0.0f, 0.0f);
@@ -76,10 +88,7 @@ public:
 		render_texture.create(ZOOM_W, ZOOM_H, false);
 
 		render_sprite.setTexture(render_texture.getTexture());
-		render_sprite.setScale( SCREEN_W/ZOOM_W, SCREEN_H/ZOOM_H );
-
-		//background_sprite.setTexture(background_texture.getTexture());
-		//background_sprite.setScale(1/zoom_factor,1/zoom_factor);
+		render_sprite.setScale( float(ZOOM), float(ZOOM) );
 
 		view = render_texture.getDefaultView();
 
@@ -118,7 +127,6 @@ public:
 		/// textures
 		for (string tex_name : config_json["textures"].getMemberNames() )
 		{
-
 			string tex_file = config_json["textures"][tex_name].asString();
 
 			cout << tex_name << ":" << tex_file << endl;
@@ -135,11 +143,29 @@ public:
 		}
 
 		//m_particles.m_texture = m_textures.at("particle");
-		m_sectors.m_texture_bg = m_textures.at("grid");
-		m_sectors.m_texture_active = m_textures.at("pixel");
+		//m_sectors.m_texture_bg = m_textures.at("grid");
+		//m_sectors.m_texture_active = m_textures.at("pixel");
+
+		m_world.m_texture = m_textures.at("world");
+
+		//auto start_loc = sf::Vector2f(ZOOM_W/2, ZOOM_H/2);
+		auto start_loc = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+		//m_world.generate_room( sf::Vector2f( 180, 90), 5,4 );
+		//m_world.generate_room( sf::Vector2f(ZOOM_W/2, ZOOM_W/2), 6,5 );
+		m_world.generate_room( start_loc, 6,5 );
 
 		m_sprites.emplace( "guy", make_shared<sf::Sprite>( *m_textures.at("guy").get() ) );
-		m_sprites.at("guy")->setPosition(SCREEN_W/2, SCREEN_H/2);
+
+		m_sprites.emplace( "torch_icon", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
+		//m_sprites.emplace( "torch", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
+
+		m_sprites.at("torch_icon")->setTextureRect( sf::IntRect(24,0, 32, 16) );
+		m_sprites.at("torch_icon")->setOrigin(32+8,16);
+
+		m_sprites.at("guy")->setPosition(start_loc);
+		m_sprites.at("guy")->setOrigin(4,4);
+		//m_sprites.at("guy")->setPosition(ZOOM_W/2, ZOOM_H/2);
 
 		m_sprites.emplace( "bg1", make_shared<sf::Sprite>( *m_textures.at("bg1").get() ) );
 
@@ -195,12 +221,8 @@ private:
   {
 		auto click_pos = sf::Mouse::getPosition(window);
 
-
-
-
-		float ud = int( -get_command(0,"up")  ) + int( get_command(0,"down") );
-		float lr = int( -get_command(0,"left")) + int( get_command(0,"right"));
-
+		int ud = int( -get_command(0,"up")  ) + int( get_command(0,"down") );
+		int lr = int( -get_command(0,"left")) + int( get_command(0,"right"));
 
 		guy.m_velocity.x += lr * guy.m_accel;
 		guy.m_velocity.y += ud * guy.m_accel;
@@ -208,66 +230,73 @@ private:
 		guy.m_velocity.x *= guy.m_friction;
 		guy.m_velocity.y *= guy.m_friction;
 
-		m_sprites.at("guy")->move(guy.m_velocity);
-
-		//m_sprites.at("guy")->move( lr * 0.5f, ud * 0.5f);
-
 		auto pos = m_sprites.at("guy")->getPosition();
+		pos += guy.m_velocity;
 
-		m_sectors.apply_force( pos.x, pos.y, 250, 3 );
-
-		bool click = get_command(0,"click");
-
-		if (click)
+		if ( !m_world.can_walk(pos) )
 		{
-			//m_sectors.apply_force(click_pos.x, click_pos.y, 50, 1);
-		}
-		m_sectors.update();
-		//m_particles.update();
-
-			//auto winsize = window.getSize();
-			//float w = (click_pos.x / float(winsize.x)) * GRID_N_W;
-			//float h = (click_pos.y / float(winsize.y)) * GRID_N_H;
-			//m_sectors.m_array[w][h].set_pos( sf::Vector2f( ((w-int(w))*2)-1.0f, ((h-int(h))*2)-1.0f ));
-
-			//auto fb_pos = m_sectors.get_pos(w,h);
-			//cout << fb_pos.x << endl;
-			//cout << fb_pos.x << ":" << fb_pos.y << endl;
-
-			/*if ( click_pos.x < 400 )
+			if( fabs(guy.m_velocity.x) > fabs(guy.m_velocity.y) )
 			{
-				cout << "left" << endl;
+				guy.m_velocity.x *= -0.75f;
+				guy.m_velocity.y *= 0.25f;
 			}
 			else
 			{
-				cout << "right" << endl;
+				guy.m_velocity.y *= -0.75f;
+				guy.m_velocity.x *= 0.25f;
+			}
+			//float x = guy.m_velocity.x;
+			//guy.m_velocity.x = guy.m_velocity.y;
+			//guy.m_velocity.y = -x;
+		}
+		else
+		{
+			view.setCenter( pos );
+
+			m_sprites.at("guy")->setPosition(pos);
+
+			bool take  = get_command(0,"take");
+			bool place = get_command(0,"place");
+
+			if ( take )
+			{
+				if ( m_world.light_take(pos) );
+				{
+					guy.num_torches++;
+
+					if (guy.num_torches > 0)
+						m_world.reset_moving_torch(0, pos);
+				}
+			}
+			else if ( place && (guy.num_torches > 0) )
+			{
+				if ( m_world.light_place(pos) )
+				{
+					guy.num_torches--;
+
+					if (guy.num_torches == 0)
+						m_world.unset_moving_torch(0);
+				}
+			}
+
+			/*if ( take || place)
+			{
+				guy.m_velocity *= 0.5f;
 			}*/
 
-		/*else if (le)
-		{
-			m_sectors.add();
-		}*/
+			if (guy.num_torches > 0)
+				m_world.set_moving_torch(0, pos);
+		}
 
-		/*else if (le)
-		{
-			for ( int i=0; i<100; ++i)
-				m_particles.rem();
-		}*/
-
-		/*
-		const sf::Vector2f& center = view.getCenter();
-		auto cen = sf::Vector2f( center.x + (ri - le)*4, center.y + (dw - up)*4 );
-		if (cen.x > WORLD_MAX_X) cen.x = WORLD_MAX_X;
-		if (cen.y > WORLD_MAX_Y) cen.y = WORLD_MAX_Y;
-		if (cen.x < WORLD_MIN_X) cen.x = WORLD_MIN_X;
-		if (cen.y < WORLD_MIN_Y) cen.y = WORLD_MIN_Y;
-		view.setCenter( cen );*/
+		//m_particles.update();
+		//m_sectors.update();
+		m_world.update();
   };
 
   void render()
   {
 		render_texture.setView(view);
-		render_texture.clear(sf::Color(8,128, 96));
+		render_texture.clear(sf::Color(8,8,10));
 
 		//float ipo = timing.get_interpolation();
 
@@ -277,12 +306,22 @@ private:
 		//render_texture.draw( *m_sprites.at( "bg1").get() );
 
 		//render_texture.draw(m_particles);
-		render_texture.draw(m_sectors);
+		//render_texture.draw(m_sectors);
+		render_texture.draw(m_world);
 
 		/// draw fg
 
 		render_texture.draw( *m_sprites.at("guy").get() );
 		/// draw ui
+
+		const sf::Vector2f& center = view.getCenter();
+
+		for ( int i=0; i< guy.num_torches; ++i )
+		{
+			m_sprites.at("torch_icon")->setPosition( (center.x  + (ZOOM_W*0.5f)) - 8 - (8*i), (center.y + (ZOOM_H*0.5f)) - 8);
+			//m_sprites.at("torch_icon")->setPosition( center.x, center.y);
+			render_texture.draw( *m_sprites.at("torch_icon").get() );
+		}
 
 		//auto ui = view.getCenter();
 		//window.draw(text);
@@ -302,20 +341,23 @@ private:
 	sf::View view;
 
 
-	float zoom_factor = 1/4.0f;
+	float zoom_factor = 1.0f/ZOOM;
 	sf::Sprite render_sprite;
 	sf::RenderTexture render_texture;
 
 	unordered_map<int, unordered_map<string, bool>> m_commands;
 
 	unordered_map<string, shared_ptr<sf::Texture>> m_textures;
+
 	unordered_map<string, shared_ptr<sf::Sprite>> m_sprites;
 
 	Guy guy;
 	//sf::Sprite m_sprite_bg;
 
 	//Particles<10000> m_particles;
-	Sectors<GRID_N_W,GRID_N_H> m_sectors;
+	//Sectors<GRID_N_W,GRID_N_H> m_sectors;
+
+	World<WORLD_SIZE,WORLD_SIZE> m_world;
 
 };
 

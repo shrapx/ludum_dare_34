@@ -3,15 +3,24 @@
 		"particle":"data/pix/particle.png",
 		"grid":"data/pix/grid.png",
 		"bg1":"data/pix/2twoside_01.png",
+		"world":"data/pix/world.png",
 		"guy":"data/pix/particle.png",
-		"pixel":"data/pix/pixel.png"
+		"pixel":"data/pix/pixel.png",
+		"torch":"data/pix/torch.png"
 	},
 
 	"binds":{
+		"Left":"left",
+		"Right":"right",
+		"Up":"up",
+		"Down":"down",
+		"Z":"place",
+		"X":"take",
 		"A":"left",
 		"D":"right",
 		"W":"up",
 		"S":"down",
-		"MouseLeft":"click"
+		"MouseLeft":"place",
+		"MouseRight":"take"
 	}
 }
