@@ -4,12 +4,13 @@
 		"grid":"data/pix/grid.png",
 		"bg1":"data/pix/2twoside_01.png",
 		"world":"data/pix/world.png",
-		"guy":"data/pix/particle.png",
+		"guy":"data/pix/guy.png",
 		"pixel":"data/pix/pixel.png",
 		"torch":"data/pix/torch.png"
 	},
 
 	"binds":{
+		"Escape":"quit",
 		"Left":"left",
 		"Right":"right",
 		"Up":"up",
