@@ -50,6 +50,7 @@ public:
 
 
 		m_sounds.emplace( "title_song", make_shared<sf::Sound>( *m_soundbuffers.at("title_song").get() ) );
+		m_sounds.at("title_song")->setVolume(75);
 		m_sounds.at("title_song")->play();
 
 	};

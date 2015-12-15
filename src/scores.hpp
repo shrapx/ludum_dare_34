@@ -62,6 +62,10 @@ public:
 		m_sprites.at("torch_icon")->setOrigin(4,16);
 
 		m_sprites.emplace( "level_star", make_shared<sf::Sprite>( *m_textures.at("particle").get() ) );
+
+		m_sounds.emplace( "title_song", make_shared<sf::Sound>( *m_soundbuffers.at("title_song").get() ) );
+		m_sounds.at("title_song")->setVolume(50);
+		m_sounds.at("title_song")->play();
 	};
 
 

@@ -39,7 +39,7 @@ public:
 		case 0:
 			m_torch_pickup = true;
 			m_torch_quantity_start = 0;
-			m_torch_default = 30.0f;
+			m_torch_default = 15.0f;
 			m_torches.resize(m_torch_quantity_start,m_torch_default);
 
 			m_accel = 0.055f;
@@ -49,7 +49,7 @@ public:
 		case 1:
 			m_torch_pickup = true;
 			m_torch_quantity_start = 3;
-			m_torch_default = 15.0f;
+			m_torch_default = 10.0f;
 			m_torches.resize(m_torch_quantity_start,m_torch_default);
 
 			m_accel = 0.025f;
@@ -59,7 +59,7 @@ public:
 		case 2:
 			m_torch_pickup = true;
 			m_torch_quantity_start=5;
-			m_torch_default = 25.0f;
+			m_torch_default = 15.0f;
 			m_torches.resize(m_torch_quantity_start,m_torch_default);
 
 			m_accel = 0.035f;
@@ -70,7 +70,7 @@ public:
 			m_torch_pickup = true;
 			m_torch_quantity_start=20;
 			m_torch_default = 0.0f;
-			m_torches.resize(m_torch_quantity_start, 10.0f);
+			m_torches.resize(m_torch_quantity_start, 15.0f);
 
 			m_accel = 0.05f;
 			m_friction = 0.98f;

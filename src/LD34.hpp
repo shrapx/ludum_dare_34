@@ -134,12 +134,11 @@ public:
 			m_menu = make_shared<Menu>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
 			option_character = menu_loop();
 
-			cout << option_character << endl;
 			m_menu.reset();
 
 			if (option_character > 0)
 			{
-				m_guy = make_shared<Guy>(option_character);
+				m_guy = make_shared<Guy>(option_character-1);
 				m_guy->m_level = 0;
 
 				bool next_level = true;
