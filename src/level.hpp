@@ -132,6 +132,7 @@ public:
 
 		sf::Vector2f world_center = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
 
+		//switch ( 5 )
 		switch ( m_guy->m_level )
 		{
 		case 0:
@@ -191,7 +192,7 @@ public:
 
 		default:
 		{
-			switch ( rand()%3 )
+			switch ( rand()%4 )
 			{
 			case 0:
 				{
@@ -210,29 +211,28 @@ public:
 					m_world.place_light_near( world_center, 5 );
 					break;
 				}
+			default:
+				{
+					break;
+				}
 			}
 
-			if (rand()%2)
-			{
+			int rand_x_r = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
+			int rand_y_r = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
 
-				int rand_x_r = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
-				int rand_y_r = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
-				int rand_x_b = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
-				int rand_y_b = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+			int rand_x_b = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
+			int rand_y_b = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
 
-				int rand_x_p = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
-				int rand_y_p = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+			int rand_x_p = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
+			int rand_y_p = ((WORLD_SIZE/8) + (rand()%(WORLD_SIZE/8))) * (rand()%2?1:-1);
 
-				m_guy->pos_portal      = world_center + sf::Vector2f( (rand_x_p)*TILE_SIZE, (rand_y_p)*TILE_SIZE);
-				m_guy->pos_button_blue = world_center + sf::Vector2f( (rand_x_b)*TILE_SIZE, (rand_y_b)*TILE_SIZE);
-				m_guy->pos_button_red  = world_center + sf::Vector2f( (rand_x_r)*TILE_SIZE, (rand_y_r)*TILE_SIZE);
-			}
-			else
-			{
-				m_guy->pos_portal      = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
-				m_guy->pos_button_blue = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
-				m_guy->pos_button_red  = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
-			}
+			m_guy->pos_portal      = world_center + sf::Vector2f( rand_x_p*TILE_SIZE, rand_y_p*TILE_SIZE);
+			m_guy->pos_button_blue = world_center + sf::Vector2f( rand_x_b*TILE_SIZE, rand_y_b*TILE_SIZE);
+			m_guy->pos_button_red  = world_center + sf::Vector2f( rand_x_r*TILE_SIZE, rand_y_r*TILE_SIZE);
+
+			//m_guy->pos_portal      = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+			//m_guy->pos_button_blue = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+			//m_guy->pos_button_red  = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
 
 			m_world.place_light_near( m_guy->pos_portal, 3 );
 			m_world.place_light_near( m_guy->pos_button_blue, -3 );
