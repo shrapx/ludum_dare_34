@@ -80,6 +80,7 @@ public:
 
 	void level_restart()
 	{
+		m_velocity = sf::Vector2f(0,0);
 		draw_portal = false;
 		draw_red_button = false;
 		draw_blue_button = false;

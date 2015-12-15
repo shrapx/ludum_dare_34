@@ -132,8 +132,6 @@ public:
 
 		sf::Vector2f world_center = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
 
-		//m_guy->m_level = 3;
-
 		switch ( m_guy->m_level )
 		{
 		case 0:
@@ -160,9 +158,12 @@ public:
 		{
 			m_guy->pos_portal      = world_center + sf::Vector2f( TILE_SIZE, -2*TILE_SIZE);
 
-			int rand_x = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
-			m_guy->pos_button_blue = world_center + sf::Vector2f( (rand_x+1)*TILE_SIZE, 1*TILE_SIZE);
-			m_guy->pos_button_red  = world_center + sf::Vector2f( (rand_x-1)*TILE_SIZE, -1*TILE_SIZE);
+			int rand_x = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+			int rand_y = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+			int dist = (2 + (rand()%6)) * (rand()%2?-1:1);
+
+			m_guy->pos_button_blue = world_center + sf::Vector2f( (rand_x+dist)*TILE_SIZE, (rand_y+dist)*TILE_SIZE);
+			m_guy->pos_button_red  = world_center + sf::Vector2f( (rand_x-dist)*TILE_SIZE, (rand_y-dist)*TILE_SIZE);
 
 			m_world.place_light_near( m_guy->pos_portal, -3 );
 
@@ -213,13 +214,14 @@ public:
 
 			if (rand()%2)
 			{
-				int rand_x_r = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
-				int rand_y_r = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
-				int rand_x_b = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
-				int rand_y_b = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
 
-				int rand_x_p = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
-				int rand_y_p = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
+				int rand_x_r = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+				int rand_y_r = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+				int rand_x_b = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+				int rand_y_b = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+
+				int rand_x_p = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
+				int rand_y_p = (WORLD_SIZE/8) + ( (WORLD_SIZE/8) * (rand()%2?-1:1));
 
 				m_guy->pos_portal      = world_center + sf::Vector2f( (rand_x_p)*TILE_SIZE, (rand_y_p)*TILE_SIZE);
 				m_guy->pos_button_blue = world_center + sf::Vector2f( (rand_x_b)*TILE_SIZE, (rand_y_b)*TILE_SIZE);
@@ -330,7 +332,11 @@ public:
 				{
 					// take torch if possible, otherwise this is like an extinguisher
 					if ( m_guy->m_torch_pickup )
-						m_guy->m_torches.push_back(m_guy->m_torch_default);
+					{
+						// must keep back at end for draining
+						m_guy->m_torches.insert(m_guy->m_torches.begin(), m_guy->m_torch_default);
+						//m_guy->m_torches.push_back(m_guy->m_torch_default);
+					}
 
 					if (no_torch)
 					{
