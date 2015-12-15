@@ -123,52 +123,95 @@ public:
 	{
 		config( "data/config.json" );
 
-
-
 		bool retry = true;
 		while (retry)
 		{
 
 			// show character option
 
-			int option_character = rand()%4;
+			int option_character = 0;
 
-			m_guy = make_shared<Guy>(option_character);
+			m_menu = make_shared<Menu>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
+			option_character = menu_loop();
 
-			m_guy->m_level = 0;
+			cout << option_character << endl;
+			m_menu.reset();
 
-			bool next_level = true;
-			while( next_level )
+			if (option_character > 0)
 			{
-				m_guy->level_restart();
-				m_level = make_shared<Level>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
+				m_guy = make_shared<Guy>(option_character);
+				m_guy->m_level = 0;
 
-				// run game loop
+				bool next_level = true;
+				while( next_level )
+				{
+					m_guy->level_restart();
+					m_level = make_shared<Level>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
 
-				next_level = game_play_loop();
+					// run game loop
 
-				// fade out
-				m_guy->m_level += 1;
+					next_level = game_play_loop();
+
+					// fade out
+					m_guy->m_level += 1;
 
 
 
-				m_level.reset();
+					m_level.reset();
+				}
+
+				// dead
+
+				// score display
+
+				m_scores = make_shared<Scores>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
+
+				retry = game_score_loop();
+
+				m_scores.reset();
+				m_guy.reset();
 			}
-
-			// dead
-
-			// score display
-
-			m_scores = make_shared<Scores>(m_window, m_commands, m_textures, m_soundbuffers, m_guy);
-
-			retry = game_score_loop();
-
-			m_scores.reset();
-			m_guy.reset();
+			else
+			{
+				retry = false;
+			}
 		}
 
 		m_window.close();
 		return 0;
+	}
+
+	int menu_loop()
+	{
+		int character = 0;
+		while( character == 0 )
+		{
+			if ( timing.update() )
+			{
+				character = m_menu->update();
+			}
+			else
+			{
+				m_menu->render();
+				m_window.draw( m_menu->get_sprite() );
+				m_window.display();
+			}
+
+			sf::Event event;
+			while(m_window.pollEvent(event))
+			{
+				switch (event.type)
+				{
+					case sf::Event::Closed:
+					{
+						character = -1;
+					}
+					default: input.handle_event(event);
+				}
+			}
+		}
+
+		return character;
 	}
 
 	bool game_play_loop()
@@ -263,6 +306,7 @@ private:
 
 	shared_ptr<Guy> m_guy;
 
+	shared_ptr<Menu> m_menu;
 	shared_ptr<Level> m_level;
 	shared_ptr<Scores> m_scores;
 

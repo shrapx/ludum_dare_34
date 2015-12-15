@@ -46,22 +46,22 @@ public:
 		m_render_sprite.setTexture(m_rendertexture.getTexture());
 		m_render_sprite.setScale( float(ZOOM), float(ZOOM) );
 
-
 		m_sprites.emplace( "menu_bg", make_shared<sf::Sprite>( *m_textures.at("menu_bg").get() ) );
 
-		m_sprites.emplace( "guy1", make_shared<sf::Sprite>( *m_textures.at("menu_guys").get() ) );
-		m_sprites.at("guy1")->setTextureRect( sf::IntRect(0, 0, 16, 16) );
-		m_sprites.emplace( "guy2", make_shared<sf::Sprite>( *m_textures.at("menu_guys").get() ) );
-		m_sprites.at("guy2")->setTextureRect( sf::IntRect(16, 0, 16, 16) );
-		m_sprites.emplace( "guy3", make_shared<sf::Sprite>( *m_textures.at("menu_guys").get() ) );
-		m_sprites.at("guy3")->setTextureRect( sf::IntRect(32, 0, 16, 16) );
-		m_sprites.emplace( "guy4", make_shared<sf::Sprite>( *m_textures.at("menu_guys").get() ) );
-		m_sprites.at("guy4")->setTextureRect( sf::IntRect(48, 0, 16, 16) );
+
+		m_sounds.emplace( "title_song", make_shared<sf::Sound>( *m_soundbuffers.at("title_song").get() ) );
+		m_sounds.at("title_song")->play();
+
 	};
 
 
   int update()
   {
+
+		if ( get_command(0, "guy1") ) return 1;
+		if ( get_command(0, "guy2") ) return 2;
+		if ( get_command(0, "guy3") ) return 3;
+		if ( get_command(0, "guy4") ) return 4;
 
 		if ( get_command(0, "quit") )
 		{
@@ -81,7 +81,7 @@ public:
 			return 1;
 		}
 
-  	return  0;
+  	return 0;
   };
 
   void render()

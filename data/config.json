@@ -23,7 +23,6 @@
 		"score_bg":"data/pix/score_bg.png",
 		"world":"data/pix/world.png",
 		"guy":"data/pix/guy.png",
-		"menu_guys":"data/pix/menu_guys.png",
 		"pixel":"data/pix/pixel.png",
 		"torch":"data/pix/torch.png",
 		"buttons":"data/pix/buttons.png",
@@ -32,10 +31,10 @@
 	},
 
 	"binds":{
-		"1":"guy1",
-		"2":"guy2",
-		"3":"guy3",
-		"4":"guy4",
+		"Num1":"guy1",
+		"Num2":"guy2",
+		"Num3":"guy3",
+		"Num4":"guy4",
 		"Escape":"quit",
 		"Return":"restart",
 		"Left":"left",
