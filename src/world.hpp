@@ -4,6 +4,9 @@
 struct Tile
 {
 	bool active = false;
+	bool m_assign_type;
+
+	bool m_force_fixed = false;
 
 	bool placed_light = false;
 	int walking_light = 0;
@@ -22,24 +25,38 @@ struct Tile
 		m_hue = (1.0f/255)*(rand()%255);
 	}
 
-	void update( int must_be_type = -1 )
+	void update()
 	{
-		if ( !active && (distance_to_light < LIGHT_DISTANCE) )
+		bool in_range = distance_to_light < LIGHT_DISTANCE;
+		if (in_range)
 		{
-			active = true;
+			if ( !active )
+			{
+				active = true;
 
-			if (must_be_type != -1)
-				m_type = must_be_type;
+				if (!m_force_fixed) m_assign_type = true;
+			}
 			else
-				m_type = rand()%TILES_MAX;
-
-			is_wall = m_type < 4;
+			{
+				m_assign_type = false;
+			}
 		}
-
-		if ( active && !(distance_to_light < LIGHT_DISTANCE) )
+		else
 		{
 			active = false;
 		}
+	}
+
+	void assign_type( int a_type = -1 )
+	{
+		if (!m_assign_type) return;
+
+		if (a_type != -1)
+			m_type = a_type;
+		else
+			m_type = rand()%TILES_MAX;
+
+		is_wall = m_type < 4;
 	}
 
 	void set_random_wall()
@@ -65,24 +82,21 @@ struct MovingTorches
 	sf::Vector2i loc_prev;
 };
 
-template<size_t size_width, size_t size_height>
 class World : public sf::Drawable
 {
 
 public:
 
+	size_t m_world_size;
+
 	shared_ptr<sf::Texture> m_texture;
 
-	array<array<Tile,size_height>,size_width> m_array;
+	array<array<Tile,WORLD_SIZE>,WORLD_SIZE> m_array;
 
 	array<MovingTorches, 16> m_lights_that_move;
 
 	vector<sf::Vector2f> m_light_positions;
 	vector<sf::Vector2f> m_light_positions_placed;
-
-	World()
-	{
-	}
 
 	void generate_room( sf::Vector2f pos, int halfwidth, int halfheight )
 	{
@@ -93,10 +107,10 @@ public:
 	void generate_room( sf::Vector2i pos, int halfwidth, int halfheight )
 	{
 		int w_start = max( int(0),          (pos.x - halfwidth) );
-		int w_end   = min( int(size_width), (pos.x + halfwidth) );
+		int w_end   = min( int(WORLD_SIZE), (pos.x + halfwidth) );
 
 		int h_start = max( int(0),           (pos.y - halfheight) );
-		int h_end   = min( int(size_height), (pos.y + halfheight) );
+		int h_end   = min( int(WORLD_SIZE), (pos.y + halfheight) );
 
 		for ( int w=w_start; w < w_end; ++w )
 		{
@@ -130,8 +144,42 @@ public:
 	sf::Vector2i validate( sf::Vector2f pos )
 	{
 		return sf::Vector2i(
-			std::max( size_t(0), std::min( size_width,  size_t(pos.x / TILE_SIZE))),
-			std::max( size_t(0), std::min( size_height, size_t(pos.y / TILE_SIZE))));
+			std::max( size_t(0), std::min( size_t(WORLD_SIZE),  size_t(pos.x / TILE_SIZE))),
+			std::max( size_t(0), std::min( size_t(WORLD_SIZE), size_t(pos.y / TILE_SIZE))));
+	}
+
+	void enforce_floor_at( sf::Vector2f pos )
+	{
+		auto ipos = validate( pos );
+		return enforce_floor_at(ipos);
+	}
+
+	void enforce_floor_at( sf::Vector2i pos )
+	{
+
+		Tile& tile = m_array[pos.x][pos.y];
+
+		tile.set_random_floor();
+
+		tile.m_force_fixed = true;
+	}
+
+	void place_light_near( sf::Vector2f pos, int distance )
+	{
+		auto ipos = validate( pos );
+		return place_light_near(ipos, distance);
+	}
+
+	void place_light_near( sf::Vector2i pos, int distance )
+	{
+
+		Tile& tile = m_array[pos.x + distance][pos.y];
+
+		tile.set_random_floor();
+
+		tile.placed_light = true;
+
+		tile.m_force_fixed = true;
 	}
 
 	bool can_walk( sf::Vector2f pos )
@@ -164,8 +212,8 @@ public:
 
 	bool light_can_place(sf::Vector2i pos)
 	{
-		if ( pos.x < 4 || pos.x > (WORLD_SIZE-4)
-			|| pos.y < 4 || pos.y > (WORLD_SIZE-4) )
+		if ( pos.x < WORLD_WALL || pos.x > (WORLD_SIZE-WORLD_WALL)
+			|| pos.y < WORLD_WALL || pos.y > (WORLD_SIZE-WORLD_WALL) )
 			return false;
 		return true;
 	}
@@ -233,9 +281,9 @@ public:
 		m_light_positions.clear();
 		m_light_positions_placed.clear();
 
-		for ( int w=0; w < size_width; ++w )
+		for ( int w=0; w < WORLD_SIZE; ++w )
 		{
-			for ( int h=0; h < size_height; ++h )
+			for ( int h=0; h < WORLD_SIZE; ++h )
 			{
 				m_array[w][h].distance_to_light = LIGHT_DISTANCE_OFF;
 
@@ -252,9 +300,9 @@ public:
 
 		for ( auto& light : m_light_positions )
 		{
-			for ( int w=0; w < size_width; ++w )
+			for ( int w=0; w < WORLD_SIZE; ++w )
 			{
-				for ( int h=0; h < size_height; ++h )
+				for ( int h=0; h < WORLD_SIZE; ++h )
 				{
 					auto pos_tile = get_pos(w, h);
 					auto pos_diff = light - pos_tile;
@@ -278,11 +326,9 @@ public:
 		{
 			if ( torch.loc != torch.loc_prev);
 			{
-				if (torch.active_prev)
-					light_walking_remove(torch.loc_prev);
+				if (torch.active_prev) light_walking_remove(torch.loc_prev);
 
-				if (torch.active)
-					light_walking_add(torch.loc);
+				if (torch.active)      light_walking_add(torch.loc);
 
 				torch.loc_prev = torch.loc;
 				torch.active_prev = torch.active;
@@ -291,18 +337,34 @@ public:
 
 		update_light_distances();
 
-		for ( int w=0; w < size_width; ++w )
+		for ( int w=0; w < WORLD_SIZE; ++w )
 		{
-			bool edge_case_w = (w < 4 || w > (WORLD_SIZE-4));
-
-			for ( int h=0; h < size_height; ++h )
+			for ( int h=0; h < WORLD_SIZE; ++h )
 			{
-				bool edge_case_h = (h < 4 || h > (WORLD_SIZE-4));
-
-				if ( edge_case_w || edge_case_h )
-					m_array[w][h].update(0);
-				else
 					m_array[w][h].update();
+			}
+		}
+	}
+
+	void assign_tiles()
+	{
+		for ( int w=0; w < WORLD_SIZE; ++w )
+		{
+			bool edge_case_w = (w < WORLD_WALL || w > (WORLD_SIZE-WORLD_WALL));
+
+			for ( int h=0; h < WORLD_SIZE; ++h )
+			{
+				bool edge_case_h = (h < WORLD_WALL || h > (WORLD_SIZE-WORLD_WALL));
+
+				// set wall always
+				if ( edge_case_w || edge_case_h )
+				{
+					m_array[w][h].assign_type(0);
+				}
+				else
+				{
+					m_array[w][h].assign_type();
+				}
 			}
 		}
 	}
@@ -319,9 +381,9 @@ private:
 		sf::Sprite sprite;
 		sprite.setTexture(*m_texture.get());
 
-		for ( int w=0; w < size_width; ++w )
+		for ( int w=0; w < WORLD_SIZE; ++w )
 		{
-			for ( int h=0; h < size_height; ++h )
+			for ( int h=0; h < WORLD_SIZE; ++h )
 			{
 				const Tile& tile = m_array[w][h];
 				if (tile.active)

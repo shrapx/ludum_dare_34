@@ -1,16 +1,43 @@
 {
+	"sounds":{
+	"step_0":"data/snd/step_0.ogg",
+	"step_1":"data/snd/step_1.ogg",
+	"step_2":"data/snd/step_2.ogg",
+	"step_3":"data/snd/step_3.ogg",
+	"step_4":"data/snd/step_4.ogg",
+	"step_5":"data/snd/step_5.ogg",
+	"step_6":"data/snd/step_6.ogg",
+	"step_7":"data/snd/step_7.ogg",
+	"button_red":"data/snd/button_0.ogg",
+	"button_blue":"data/snd/button_1.ogg",
+	"jingle_0":"data/snd/jingle_0.ogg",
+	"jingle_1":"data/snd/jingle_1.ogg",
+	"level_complete":"data/snd/level_complete.ogg",
+	"title_song":"data/snd/song2.ogg"
+	},
+
 	"textures":{
 		"particle":"data/pix/particle.png",
 		"grid":"data/pix/grid.png",
-		"bg1":"data/pix/2twoside_01.png",
+		"menu_bg":"data/pix/menu_bg.png",
+		"score_bg":"data/pix/score_bg.png",
 		"world":"data/pix/world.png",
 		"guy":"data/pix/guy.png",
+		"menu_guys":"data/pix/menu_guys.png",
 		"pixel":"data/pix/pixel.png",
-		"torch":"data/pix/torch.png"
+		"torch":"data/pix/torch.png",
+		"buttons":"data/pix/buttons.png",
+		"portal":"data/pix/portal.png",
+		"score_sticks":"data/pix/score_sticks.png"
 	},
 
 	"binds":{
+		"1":"guy1",
+		"2":"guy2",
+		"3":"guy3",
+		"4":"guy4",
 		"Escape":"quit",
+		"Return":"restart",
 		"Left":"left",
 		"Right":"right",
 		"Up":"up",

@@ -14,9 +14,6 @@
 #include "SFML/System.hpp"
 #include "SFML/Audio.hpp"
 
-#define M_PI		3.14159265358979323846
-#define M_PI_2	1.57079632679489661923
-
 #define LIGHT_DISTANCE 50
 #define LIGHT_DISTANCE_OFF 100000
 
@@ -24,14 +21,8 @@
 #define TILES_MAX 16
 #define TILES_SQUARED 4
 
-#define SCREEN_W 1440
-#define SCREEN_H 720
-
 #define WORLD_SIZE 64
-
-#define ZOOM 6.0f
-#define ZOOM_W SCREEN_W/ZOOM
-#define ZOOM_H SCREEN_H/ZOOM
+#define WORLD_WALL 4
 
 #define SCREEN_GRID_W SCREEN_W/float(TILE_SIZE)
 #define SCREEN_GRID_H SCREEN_H/float(TILE_SIZE)
@@ -68,12 +59,13 @@ public:
 		sf::RenderWindow& window,
 		unordered_map<int, unordered_map<string, bool>>& commands,
 		unordered_map<string, shared_ptr<sf::Texture>>& textures,
-		shared_ptr<Guy>& guy,
-		int level_num)
+		unordered_map<string, shared_ptr<sf::SoundBuffer>>& soundbuffers,
+		shared_ptr<Guy>& guy)
 	:
 		m_window(window),
 		m_commands(commands),
 		m_textures(textures),
+		m_soundbuffers(soundbuffers),
 		m_guy(guy)
 	{
 
@@ -84,26 +76,41 @@ public:
 		m_render_sprite.setTexture(m_rendertexture.getTexture());
 		m_render_sprite.setScale( float(ZOOM), float(ZOOM) );
 
+		m_sounds.emplace( "level_complete", make_shared<sf::Sound>( *m_soundbuffers.at("level_complete").get() ) );
+
+		m_sounds.emplace( "button_red", make_shared<sf::Sound>( *m_soundbuffers.at("button_red").get() ) );
+		m_sounds.emplace( "button_blue", make_shared<sf::Sound>( *m_soundbuffers.at("button_blue").get() ) );
+
+		m_sounds.emplace( "jingle_0", make_shared<sf::Sound>( *m_soundbuffers.at("jingle_0").get() ) );
+		m_sounds.emplace( "jingle_1", make_shared<sf::Sound>( *m_soundbuffers.at("jingle_1").get() ) );
+		m_sounds.at("jingle_0")->setVolume(25);
+		m_sounds.at("jingle_1")->setVolume(25);
 
 
-		switch ( level_num )
+		m_sounds.emplace( "step_0", make_shared<sf::Sound>( *m_soundbuffers.at("step_0").get() ) );
+		m_sounds.emplace( "step_1", make_shared<sf::Sound>( *m_soundbuffers.at("step_1").get() ) );
+		m_sounds.emplace( "step_2", make_shared<sf::Sound>( *m_soundbuffers.at("step_2").get() ) );
+		m_sounds.emplace( "step_3", make_shared<sf::Sound>( *m_soundbuffers.at("step_3").get() ) );
+		m_sounds.emplace( "step_4", make_shared<sf::Sound>( *m_soundbuffers.at("step_4").get() ) );
+		m_sounds.emplace( "step_5", make_shared<sf::Sound>( *m_soundbuffers.at("step_5").get() ) );
+		m_sounds.emplace( "step_6", make_shared<sf::Sound>( *m_soundbuffers.at("step_6").get() ) );
+		m_sounds.emplace( "step_7", make_shared<sf::Sound>( *m_soundbuffers.at("step_7").get() ) );
+
+		m_step_array[0] = m_sounds.at("step_0");
+		m_step_array[1] = m_sounds.at("step_1");
+		m_step_array[2] = m_sounds.at("step_2");
+		m_step_array[3] = m_sounds.at("step_3");
+		m_step_array[4] = m_sounds.at("step_4");
+		m_step_array[5] = m_sounds.at("step_5");
+		m_step_array[6] = m_sounds.at("step_6");
+		m_step_array[7] = m_sounds.at("step_7");
+
+		for ( auto& snd : m_step_array )
 		{
-
+			snd->setVolume(20);
 		}
 
-		m_world.m_texture = m_textures.at("world");
-
-		//auto start_loc = sf::Vector2f(ZOOM_W/2, ZOOM_H/2);
-		auto start_loc = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
-
-		//m_world.generate_room( sf::Vector2f( 180, 90), 5,4 );
-		//m_world.generate_room( sf::Vector2f(ZOOM_W/2, ZOOM_W/2), 6,5 );
-		m_world.generate_room( start_loc, 6,5 );
-
-
-
 		m_sprites.emplace( "torch_icon", make_shared<sf::Sprite>( *m_textures.at("torch").get() ) );
-
 		m_sprites.at("torch_icon")->setTextureRect( sf::IntRect(24,0, 32, 16) );
 		m_sprites.at("torch_icon")->setOrigin(4,16);
 
@@ -112,13 +119,140 @@ public:
 		m_sprites.at("torch")->setOrigin(4,4);
 
 		m_sprites.emplace( "guy", make_shared<sf::Sprite>( *m_textures.at("guy").get() ) );
-		m_sprites.at("guy")->setPosition(start_loc);
 		m_sprites.at("guy")->setOrigin(2,2);
+
+		m_sprites.emplace( "red_button", make_shared<sf::Sprite>( *m_textures.at("buttons").get() ) );
+		m_sprites.at("red_button")->setTextureRect( sf::IntRect(0, 0, 8, 8) );
+
+		m_sprites.emplace( "blue_button", make_shared<sf::Sprite>( *m_textures.at("buttons").get() ) );
+		m_sprites.at("blue_button")->setTextureRect( sf::IntRect(16, 0, 8, 8) );
+
+		m_sprites.emplace( "portal", make_shared<sf::Sprite>( *m_textures.at("portal").get() ) );
+		m_sprites.at("portal")->setTextureRect( sf::IntRect(0, 0, 8, 8) );
+
+		sf::Vector2f starting_location;
+
+		m_guy->m_level = 3;
+
+		switch ( m_guy->m_level )
+		{
+		case 0:
+		{
+
+
+			starting_location = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+			m_world.generate_room( starting_location, 6, 5);
+
+
+			m_guy->pos_portal      = starting_location + sf::Vector2f( TILE_SIZE, -2*TILE_SIZE);
+
+			m_guy->pos_button_blue = starting_location + sf::Vector2f(  2*TILE_SIZE,    TILE_SIZE);
+
+			m_guy->pos_button_red  = starting_location + sf::Vector2f( -2*TILE_SIZE,    TILE_SIZE);
+
+			break;
+		}
+		case 1:
+		{
+			starting_location = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+			m_world.generate_room( starting_location, 6, 5);
+
+			m_guy->pos_portal      = starting_location + sf::Vector2f( TILE_SIZE, -2*TILE_SIZE);
+
+			m_guy->pos_button_blue = starting_location + sf::Vector2f(  2*TILE_SIZE,    TILE_SIZE);
+
+			m_guy->pos_button_red  = starting_location + sf::Vector2f( -8*TILE_SIZE,    TILE_SIZE);
+
+
+			break;
+		}
+		case 2:
+		{
+			starting_location = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+			//m_world.generate_room( starting_location, 6, 5);
+
+			m_guy->pos_portal      = starting_location + sf::Vector2f( TILE_SIZE, -2*TILE_SIZE);
+
+			int rand_x = (rand()%(WORLD_SIZE/4)) + (WORLD_SIZE/4);
+			m_guy->pos_button_blue = starting_location + sf::Vector2f( (rand_x+1)*TILE_SIZE, TILE_SIZE);
+			m_guy->pos_button_red  = starting_location + sf::Vector2f( (rand_x-1)*TILE_SIZE, TILE_SIZE);
+
+			m_world.place_light_near( m_guy->pos_portal, -3 );
+
+			m_world.place_light_near( m_guy->pos_button_blue, -3 );
+			m_world.place_light_near( m_guy->pos_button_red, 3 );
+
+			break;
+		}
+		case 3:
+		case 4:
+		{
+			starting_location = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+			int _size   = 5 + rand()%6;
+			int _offset = (rand()%8)-4;
+
+			m_world.generate_room( starting_location, _size+_offset, _size-_offset );
+			//m_world.generate_room( starting_location, 4+(rand()%4), 4+(rand()%4) );
+
+			m_guy->pos_portal      = starting_location + sf::Vector2f( TILE_SIZE, -2*TILE_SIZE);
+			m_guy->pos_button_blue = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+			m_guy->pos_button_red  = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+
+			m_world.place_light_near( m_guy->pos_button_blue, -3 );
+			m_world.place_light_near( m_guy->pos_button_red, 3 );
+
+			break;
+		}
+		default:
+		{
+			starting_location = sf::Vector2f((WORLD_SIZE/2) * TILE_SIZE, (WORLD_SIZE/2) * TILE_SIZE);
+
+			if ( rand()%1 )
+				m_world.generate_room( starting_location, 4+(rand()%4), 4+(rand()%4) );
+
+			m_guy->pos_portal      = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+			m_guy->pos_button_blue = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+			m_guy->pos_button_red  = sf::Vector2f( ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE, ((rand()%(WORLD_SIZE-WORLD_WALL))+WORLD_WALL)*TILE_SIZE);
+
+
+			m_world.place_light_near( m_guy->pos_portal, 3 );
+			m_world.place_light_near( m_guy->pos_button_blue, -3 );
+			m_world.place_light_near( m_guy->pos_button_red, 3 );
+			break;
+		}
+		}
+
+		m_world.enforce_floor_at(starting_location);
+
+		m_world.enforce_floor_at(m_guy->pos_portal);
+		m_world.enforce_floor_at(m_guy->pos_button_blue);
+		m_world.enforce_floor_at(m_guy->pos_button_red);
+
+		m_world.m_texture = m_textures.at("world");
+
+		m_sprites.at("guy")->setPosition(starting_location);
+		m_sprites.at("red_button" )->setPosition(m_guy->pos_button_red);
+		m_sprites.at("blue_button")->setPosition(m_guy->pos_button_blue);
+		m_sprites.at("portal" )->setPosition(m_guy->pos_portal);
+
 	};
 
 
-  void update()
+  int update() // -1 = game over, 0 = in game, 1 = level completed
   {
+  	if ( get_command(0, "quit") )
+		{
+			m_quit_on_release = true;
+		}
+		else if (m_quit_on_release)
+		{
+			return -1;
+		}
+
 		auto click_pos = sf::Mouse::getPosition(m_window);
 
 		int ud = int( -get_command(0,"up")  ) + int( get_command(0,"down") );
@@ -133,6 +267,9 @@ public:
 		//m_sprites.at("guy")->setTextureRect( sf::IntRect((lr!=0)*4, 0, 4, 4) );
 
 		auto pos = m_sprites.at("guy")->getPosition();
+
+		if (!m_world.can_walk(pos)) return -1;
+
 		pos += m_guy->m_velocity;
 
 
@@ -174,12 +311,13 @@ public:
 			//bool no_torch = m_guy->num_torches == 0;
 			bool no_torch = m_guy->m_torches.size() == 0;
 
-			if ( take )
+			if ( take)
 			{
 				if ( m_world.light_take(pos) )
 				{
-					//m_guy->num_torches++;
-					m_guy->m_torches.push_back(m_guy->m_torch_default);
+					// take torch if possible, otherwise this is like an extinguisher
+					if ( m_guy->m_torch_pickup )
+						m_guy->m_torches.push_back(m_guy->m_torch_default);
 
 					if (no_torch)
 					{
@@ -195,52 +333,110 @@ public:
 
 				if ( m_world.light_place(pos) )
 				{
-					//m_guy->num_torches--;
 					m_guy->m_torches.pop_back();
 
-					//if (m_guy->num_torches == 0) m_world.unset_moving_torch(0);
 					if (m_guy->m_torches.size() == 0) m_world.set_moving_torch(0, false,  pos);
 				}
-				//cout << m_guy->num_torches << endl;
+
 			}
 
-			/*if ( take || place)
+			if ( take || place)
 			{
 				m_guy->m_velocity *= 0.5f;
-			}*/
+			}
 
 			if (m_guy->m_torches.size() > 0) m_world.set_moving_torch(0, true,  pos);
 
 
-			//int is_right = (dira > (M_PI*0.5f) ) * 4; // left or right
-			//if (dira > 2.32 || dira < 0.782) // left or right
 			float dir = atan2(m_guy->m_velocity.y, m_guy->m_velocity.x);
 			float dira = fabs(dir);
-
 			if (dira != dir) dira = M_PI-dira;
-
 			m_guy->m_tex_rect.left = (int((dira/M_PI) * 4.5) * 4)%16;
-
 			m_sprites.at("guy")->setTextureRect( m_guy->m_tex_rect );
-			//m_sprites.at("guy")->setTextureRect( sf::IntRect( rx, ry, 4, 4 ) );
+
+			if (m_world.can_walk(m_guy->pos_portal))
+			{
+				if (m_guy->red_button_press && m_guy->blue_button_press &&
+								m_world.validate(pos) == m_world.validate(m_guy->pos_portal) )
+				{
+					/// level complete
+					m_sounds.at("level_complete")->play();
+
+					while ( m_sounds.at("level_complete")->getStatus() == sf::SoundSource::Playing)
+					{
+					}
+
+					return 1;
+				}
+
+
+				m_guy->draw_portal = true;
+				m_sprites.at("portal")->setTextureRect( sf::IntRect(m_guy->red_button_press*8 + m_guy->blue_button_press*8, 0, 8, 8) );
+			}
+
+			if (m_world.can_walk(m_guy->pos_button_red))
+			{
+				if (m_world.validate(pos) == m_world.validate(m_guy->pos_button_red) )
+				{
+
+					if (!m_guy->red_button_press)
+					{
+						m_sounds.at("button_red")->play();
+						m_guy->red_button_press = true;
+					}
+				}
+
+				m_guy->draw_red_button = true;
+				m_sprites.at("red_button")->setTextureRect( sf::IntRect(m_guy->red_button_press*8, 0, 8, 8) );
+			}
+			else
+			{
+				m_guy->draw_red_button = false;
+			}
+
+			if (m_world.can_walk(m_guy->pos_button_blue))
+			{
+				if (m_world.validate(pos) == m_world.validate(m_guy->pos_button_blue) )
+				{
+					if (!m_guy->blue_button_press)
+					{
+						m_sounds.at("button_blue")->play();
+						m_guy->blue_button_press = true;
+					}
+				}
+
+				m_guy->draw_blue_button = true;
+				m_sprites.at("blue_button")->setTextureRect( sf::IntRect(16 + (m_guy->blue_button_press*8), 0, 8, 8) );
+			}
+			else
+			{
+				m_guy->draw_blue_button = false;
+			}
+
+		}
+
+
+		float spd = sqrt((m_guy->m_velocity.x * m_guy->m_velocity.x) + (m_guy->m_velocity.y * m_guy->m_velocity.y));
+		m_step_delay -= spd;
+		if (m_step_delay < 0.0f)
+		{
+			m_step_array[rand()%8]->play();
+
+			m_step_delay = m_step_delay_start;
 		}
 
 		//m_particles.update();
 		//m_sectors.update();
 		m_world.update();
+		m_world.assign_tiles();
+
+		return 0;
   };
 
   void render()
   {
 		m_rendertexture.setView(m_view);
 		m_rendertexture.clear(sf::Color(8,8,12));
-
-		//float ipo = timing.get_interpolation();
-
-		//m_rendertexture.draw(sprite);
-
-		//m_rendertexture.draw(m_sprite_bg);
-		//m_rendertexture.draw( *m_sprites.at( "bg1").get() );
 
 		// bg
 
@@ -254,6 +450,20 @@ public:
 		{
 			m_sprites.at("torch")->setPosition( pos );
 			m_rendertexture.draw( *m_sprites.at("torch").get() );
+		}
+
+		if (m_guy->draw_red_button)
+		{
+			m_rendertexture.draw( *m_sprites.at("red_button").get() );
+		}
+
+		if (m_guy->draw_blue_button)
+		{
+			m_rendertexture.draw( *m_sprites.at("blue_button").get() );
+		}
+		if (m_guy->draw_portal)
+		{
+			m_rendertexture.draw( *m_sprites.at("portal").get() );
 		}
 
 		m_rendertexture.draw( *m_sprites.at("guy").get() );
@@ -276,7 +486,6 @@ public:
 				m_sprites.at("torch_icon")->setPosition( (center.x  + (ZOOM_W*0.5f)) - 8 - (8*i), (center.y + (ZOOM_H*0.5f)) - 8);
 			}
 
-			//m_sprites.at("torch_icon")->setPosition( center.x, center.y);
 			m_rendertexture.draw( *m_sprites.at("torch_icon").get() );
 		}
 
@@ -299,6 +508,7 @@ private:
 
 	unordered_map<int, unordered_map<string, bool>>& m_commands;
 	unordered_map<string, shared_ptr<sf::Texture>>& m_textures;
+	unordered_map<string, shared_ptr<sf::SoundBuffer>>& m_soundbuffers;
 
 
 	sf::Sprite m_render_sprite;
@@ -306,14 +516,22 @@ private:
 	sf::View m_view;
 
 	unordered_map<string, shared_ptr<sf::Sprite>> m_sprites;
+	unordered_map<string, shared_ptr<sf::Sound>> m_sounds;
+
+	array<shared_ptr<sf::Sound>, 8> m_step_array;
+
+
+	float m_step_delay_start = 5.0f;
+	float m_step_delay = m_step_delay_start/2;
 
 	shared_ptr<Guy> m_guy;
-	//sf::Sprite m_sprite_bg;
 
 	//Particles<10000> m_particles;
 	//Sectors<GRID_N_W,GRID_N_H> m_sectors;
 
-	World<WORLD_SIZE,WORLD_SIZE> m_world;
+	World m_world;
+
+	bool m_quit_on_release = false;
 
 };
 

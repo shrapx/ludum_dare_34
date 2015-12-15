@@ -18,7 +18,7 @@ private:
   high_resolution_clock::time_point time_start;
 
 	float time_ipo = 0.0f;
-  float time_step = 1.0f / 30.0f;
+  float time_step = 1.0f / 60.0f;
   float time_last = 0.0f;
   float time_curr = 0.0f;
   float time_next = 0.0f;

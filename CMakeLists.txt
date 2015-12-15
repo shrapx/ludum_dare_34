@@ -27,7 +27,9 @@ set(SRC
 	src/timing.hpp
 	src/LD34.hpp
 	src/guy.hpp
+	src/main_menu.hpp
 	src/level.hpp
+	src/scores.hpp
 	src/colour.hpp
 	src/particles.hpp
 	src/sectors.hpp
